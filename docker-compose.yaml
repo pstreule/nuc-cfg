@@ -7,18 +7,19 @@ services:
     volumes:
       - /opt/homeassistant/config:/config
       - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "8123:8123"
     privileged: true
-    network_mode: host
-  mosquitto:
-      container_name: mosquitto
-      image: eclipse-mosquitto:latest
-      restart: unless-stopped
-      volumes:
-        - /opt/mosquitto:/mosquitto
-      ports:
-        - 1883:1883
-        - 9001:9001  
-      command: "mosquitto -c /mosquitto-no-auth.conf"
+  mqtt:
+    container_name: mqtt
+    image: eclipse-mosquitto:latest
+    restart: unless-stopped
+    volumes:
+      - /opt/mosquitto:/mosquitto
+    ports:
+      - 1883:1883
+      - 9001:9001  
+    command: "mosquitto -c /mosquitto-no-auth.conf"
   zigbee2mqtt:
     container_name: zigbee2mqtt
     image: koenkk/zigbee2mqtt
@@ -32,6 +33,18 @@ services:
       - TZ=Australia/Sydney
     devices:
       - /dev/ttyACM0:/dev/ttyACM0
-    user: "1000:1000"
-    group_add:
-      - dialout
+  matter-server:
+    image: ghcr.io/home-assistant-libs/python-matter-server:stable
+    container_name: matter-server
+    restart: unless-stopped
+    # Required for mDNS to work correctly
+    network_mode: host
+    security_opt:
+      # Needed for Bluetooth via dbus
+      - apparmor:unconfined
+    volumes:
+      # Create an .env file that sets the USERDIR environment variable.
+      - /opt/matter-server/data:/data/
+      - /run/dbus:/run/dbus:ro
+    ports:
+      - 5580:5580
